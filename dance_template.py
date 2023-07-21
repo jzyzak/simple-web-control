@@ -1,7 +1,7 @@
 from motor_test import test_motor
 import time
 from pymavlink import mavutil
-
+import socket
 
 def arm_rov(mav_connection):
     """
@@ -36,16 +36,65 @@ def run_motors_timed(mav_connection, seconds: int, motor_settings: list) -> None
         time.sleep(0.2)
 
 if __name__ == "__main__":
+    HOST = "10.29.120.78"  # The server's hostname or IP address
+    PORT = 8669  # The port used by the server
+
+    #with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        #s.connect((HOST, PORT))
+        #s.sendall(b"Hello, world")
+        #data = s.recv(1024)
+
+    #print(f"Received {data!r}")
+    #mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
+    #print("Waiting for connection")
+    #mav_connection.wait_heartbeat()
+    # Arm the ROV and wait for confirmation
+    #arm_rov(mav_connection)
+
+    #print("ARMED")
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("10.29.120.78", 8366)) # associates socket with a specific network interface and port number
+        s.listen() # makes this a listening socket that enables the server to accept connections
+        conn, addr = s.accept() # blocks execution and waits for an incoming connection
+        with conn:
+            print(f"Connected by {addr}")
+            exit = False
+            while exit == False:
+                data = conn.recv(4096)
+                input = data.decode("utf-8")
+                #if(input.strip() == 'arm'):
+                    #print(input.strip())
+                mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
+                mav_connection.wait_heartbeat()
+                arm_rov(mav_connection)
+                if(input == "done"):
+                    exit = True
+                else:
+                    settings = input.split(" ")
+                    try:
+                        run_motors_timed(mav_connection, seconds=int(settings[6]), motor_settings=[int(settings[0]), int(settings[1]), int(settings[2]), int(settings[3]), int(settings[4]), int(settings[5])])
+                    except:
+                        print("Invalid input")
+                #disarm_rov(mav_connection)
+                #if not data:
+                    #break
+                #conn.sendall(data)
+                #s.send(b"Done with command")
+        
+        
+
+
     ####
     # Initialize ROV
     ####
-    mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
-    print("Waiting for connection")
-    mav_connection.wait_heartbeat()
+    #mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
+    #print("Waiting for connection")
+    #mav_connection.wait_heartbeat()
     # Arm the ROV and wait for confirmation
-    arm_rov(mav_connection)
+    #arm_rov(mav_connection)
 
-    print("ARMED")
+    #print("ARMED")
 
     ####
     # Run choreography
@@ -55,7 +104,7 @@ if __name__ == "__main__":
     Motors power ranges from -100 to 100
     """
 
-    run_motors_timed(mav_connection, seconds=10.498, motor_settings=[0, 100, 0, 100, 0, 0])
+    #run_motors_timed(mav_connection, seconds=10.498, motor_settings=[0, 100, 0, 100, 0, 0])
 
     """
     sec = 3.8315
@@ -93,10 +142,10 @@ if __name__ == "__main__":
 
 
     # stop
-    run_motors_timed(mav_connection, seconds=5, motor_settings=[0, 0, 0, 0, 0, 0])
-    print("stopped")
+    #run_motors_timed(mav_connection, seconds=5, motor_settings=[0, 0, 0, 0, 0, 0])
+    #print("stopped")
     ####
     # Disarm ROV and exit
     ####
-    disarm_rov(mav_connection)
-    print("disarmed")
+    #disarm_rov(mav_connection)
+    #print("disarmed")
