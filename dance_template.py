@@ -84,7 +84,7 @@ if __name__ == "__main__":
                             try:
                                 if(i == 6 and int(settings[i]) <= 0):
                                     run = False
-                                elif(int(settings[i]) < -100 or int(settings[i]) > 100):
+                                elif(i != 6 and (int(settings[i]) < -100 or int(settings[i]) > 100)):
                                     run = False
                             except ValueError or TypeError:
                                 run = False
