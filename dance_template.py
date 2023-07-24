@@ -2,6 +2,7 @@ from motor_test import test_motor
 import time
 from pymavlink import mavutil
 import socket
+import select
 
 def arm_rov(mav_connection):
     """
@@ -54,33 +55,45 @@ if __name__ == "__main__":
     #print("ARMED")
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("10.29.120.78", 8366)) # associates socket with a specific network interface and port number
+        s.bind(("10.29.120.78", 8566)) # associates socket with a specific network interface and port number
         s.listen() # makes this a listening socket that enables the server to accept connections
         conn, addr = s.accept() # blocks execution and waits for an incoming connection
         with conn:
             print(f"Connected by {addr}")
             exit = False
+            mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
+            mav_connection.wait_heartbeat()
+            arm_rov(mav_connection)
+            s.setblocking(False)
             while exit == False:
-                data = conn.recv(4096)
+                try:
+                    data = conn.recv(1024 , socket.MSG_DONTWAIT)
+                except BlockingIOError:
+                    data = bytes("0 0 0 0 0 0 1", 'utf-8')
                 input = data.decode("utf-8")
-                #if(input.strip() == 'arm'):
-                    #print(input.strip())
-                mav_connection = mavutil.mavlink_connection('udpin:0.0.0.0:14550')
-                mav_connection.wait_heartbeat()
-                arm_rov(mav_connection)
-                if(input == "done"):
+                if(str(input) == "done"):
                     exit = True
                 else:
                     settings = input.split(" ")
-                    try:
+                    run = True
+                    if(len(settings) != 7):
+                        run = False
+                    else:
+                        for i in range(0, 7):
+                            try:
+                                if(i == 6 and int(settings[i]) <= 0):
+                                    run = False
+                                elif(int(settings[i]) < -100 or int(settings[i]) > 100):
+                                    run = False
+                            except ValueError or TypeError:
+                                run = False
+                                break
+                    if(run):
                         run_motors_timed(mav_connection, seconds=int(settings[6]), motor_settings=[int(settings[0]), int(settings[1]), int(settings[2]), int(settings[3]), int(settings[4]), int(settings[5])])
-                    except:
-                        print("Invalid input")
-                #disarm_rov(mav_connection)
-                #if not data:
-                    #break
-                #conn.sendall(data)
-                #s.send(b"Done with command")
+                    else:
+                        error = "Invalid Input\n"
+                        print(error)
+                        conn.send(error.encode())
         
         
 
