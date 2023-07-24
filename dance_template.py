@@ -70,8 +70,9 @@ if __name__ == "__main__":
                     data = conn.recv(1024 , socket.MSG_DONTWAIT)
                 except BlockingIOError:
                     data = bytes("0 0 0 0 0 0 1", 'utf-8')
-                input = data.decode("utf-8")
-                if(str(input) == "done"):
+                input = data.decode()
+                if(input.strip() == "done"):
+                    conn.send("Disarmed!".encode())
                     exit = True
                 else:
                     settings = input.split(" ")
